@@ -1,0 +1,55 @@
+{
+  "name": "duranlux-pos",
+  "version": "1.3.8",
+  "description": "Duranlux Bulut POS Kasa Sistemi",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "keywords": [
+    "pos",
+    "kasa",
+    "electron"
+  ],
+  "author": "Duranlux",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^26.15.3",
+    "electron-packager": "^17.1.2"
+  },
+  "build": {
+    "appId": "com.duranluxpos.app",
+    "productName": "Duranlux Adisyon",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "requestedExecutionLevel": "asInvoker",
+      "icon": "icon.ico"
+    },
+    "portable": {
+      "splashImage": "splash.bmp",
+      "artifactName": "Duranlux Adisyon.exe"
+    },
+    "files": [
+      "index.html",
+      "style.css",
+      "app.js",
+      "main.js",
+      "lib/**/*",
+      "icon.ico",
+      "icon.png",
+      "instagram.png"
+    ]
+  },
+  "dependencies": {
+    "@octokit/rest": "^22.0.1",
+    "firebase": "^12.15.0",
+    "firebase-admin": "^14.1.0",
+    "jimp": "^1.6.1",
+    "mime-types": "^3.0.2"
+  }
+}

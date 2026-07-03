@@ -626,460 +626,96 @@ function checkAndModifyProductsForVersion(username) {
 function checkForUpdates(username = null) {
     if (!isFirebaseInitialized) return;
 
-    // Clear old listeners if they exist to avoid duplicates
-    if (globalUpdateListenerRef) {
-        db.ref('updates').off('value', globalUpdateListenerRef);
-    }
-    if (userUpdateListenerRef && username) {
-        db.ref(`users/${username}/updates`).off('value', userUpdateListenerRef);
-    }
-
-    // Function to check global updates if user updates are not present/applicable
-    const checkGlobalUpdates = () => {
-        globalUpdateListenerRef = db.ref('updates').on('value', (snapshot) => {
-            const updateData = snapshot.val();
-            if (updateData) {
-                processUpdateCheck(updateData);
-            }
-        });
-    };
-
-    if (username) {
-        // Prioritize user-specific updates
-        userUpdateListenerRef = db.ref(`users/${username}/updates`).on('value', (userSnapshot) => {
-            const userUpdateData = userSnapshot.val();
-            if (userUpdateData) {
-                const hasUpdate = processUpdateCheck(userUpdateData);
-                if (!hasUpdate) {
-                    checkGlobalUpdates(); // If user-specific update is not newer, fallback to global
+    // Fetch latest package.json from github main branch
+    const https = window.require('https');
+    https.get('https://raw.githubusercontent.com/Duranlux/duranlux-pos-updates/main/package.json', { headers: { 'Cache-Control': 'no-cache' } }, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+            try {
+                const pkg = JSON.parse(data);
+                if (pkg.version && isNewerVersion(APP_VERSION, pkg.version)) {
+                    updateInfo = { 
+                        version: pkg.version, 
+                        url: 'source_update' 
+                    };
+                    const updateBadge = document.getElementById('update-badge');
+                    if (updateBadge) {
+                        updateBadge.style.display = 'flex';
+                        updateBadge.textContent = "Güncelleme Mevcut (" + pkg.version + ")";
+                    }
                 }
-            } else {
-                checkGlobalUpdates(); // No user-specific update data, fallback to global
+            } catch (e) {
+                console.error("Guncelleme kontrol hatasi:", e);
             }
         });
-    } else {
-        // No user logged in yet, just check global
-        checkGlobalUpdates();
-    }
+    }).on('error', (err) => {
+        console.error("Guncelleme kontrol hatasi:", err);
+    });
 }
 
 function processUpdateCheck(data) {
-    const nextVer = data.current_version || data.currentVersion;
-    const downloadUrl = data.download_url || data.downloadUrl;
-
-    if (nextVer && downloadUrl && isNewerVersion(APP_VERSION, nextVer)) {
-        updateInfo = { 
-            version: nextVer, 
-            url: downloadUrl,
-            download_token: data.download_token
-        };
-        
-        // Display the update badge next to the clock
-        const updateBadge = document.getElementById('update-badge');
-        if (updateBadge) {
-            updateBadge.style.display = 'flex';
-            updateBadge.textContent = `🎁 Güncelleme Mevcut (v${nextVer})`;
-        }
-
-        // Show the prompt dialog
-        triggerUpdatePrompt();
-        return true;
-    }
-    return false;
-}
-
-function isNewerVersion(oldVer, newVer) {
-    if (!newVer) return false;
-    const oldParts = oldVer.split('.').map(Number);
-    const newParts = newVer.split('.').map(Number);
-    for (let i = 0; i < Math.max(oldParts.length, newParts.length); i++) {
-        const oldPart = oldParts[i] || 0;
-        const newPart = newParts[i] || 0;
-        if (newPart > oldPart) return true;
-        if (newPart < oldPart) return false;
-    }
-    return false;
-}
-
-function triggerUpdatePrompt() {
-    if (!updateInfo) return;
-    showCustomConfirm(
-        "Güncelleme mevcut. Şimdi güncellemek ister misiniz? Daha sonra da güncelleyebilirsiniz.",
-        "Güncelleme Mevcut",
-        "ŞİMDİ GÜNCELLE",
-        "SONRA",
-        (result) => {
-            if (result) {
-                startUpdateDownload();
-            }
-        }
-    );
-}
-
-function triggerUpdateFlow() {
-    triggerUpdatePrompt();
+    // Deprecated, no longer used with Github raw fetching.
 }
 
 function startUpdateDownload() {
-    if (!updateInfo || !updateInfo.url) return;
+    if (!updateInfo) return;
 
     const fs = window.require('fs');
     const path = window.require('path');
-    const { spawn } = window.require('child_process');
-    const { ipcRenderer } = window.require('electron');
+    const https = window.require('https');
 
-    const tempDir = process.env.TEMP || process.env.TMP || 'C:\\Windows\\Temp';
-    const tempUpdateExe = path.join(tempDir, 'duranlux_update.exe');
-    const ps1Path = path.join(tempDir, 'duranlux_update.ps1');
-
-    // Show download progress modal
     const progressOverlay = document.getElementById('update-progress-overlay');
     const progressBar = document.getElementById('update-progress-bar');
     const progressText = document.getElementById('update-progress-text');
     
     if (progressOverlay) progressOverlay.style.display = 'flex';
+    if (progressBar) progressBar.style.width = '10%';
+    if (progressText) progressText.textContent = 'Güncelleme indiriliyor...';
 
-    // Helper function to follow HTTP redirects and download
-    function downloadFile(url, destPath, onProgress, onSuccess, onError) {
-        const https = window.require('https');
-        const http = window.require('http');
-        const urlModule = window.require('url');
+    const filesToUpdate = ['app.js', 'index.html', 'style.css', 'package.json', 'apply_updates.js'];
+    let downloaded = 0;
+    let hasError = false;
 
-        let isCompleted = false;
-        function safeSuccess() {
-            if (isCompleted) return;
-            isCompleted = true;
-            onSuccess();
-        }
-        function safeError(err) {
-            if (isCompleted) return;
-            isCompleted = true;
-            onError(err);
-        }
-
-        function download(currentUrl) {
-            const formattedUrl = currentUrl.replace(/ /g, '%20');
-            const parsedUrl = urlModule.parse(formattedUrl);
-            const protocol = parsedUrl.protocol === 'https:' ? https : http;
-
-            const options = {
-                hostname: parsedUrl.hostname,
-                path: parsedUrl.path,
-                headers: {
-                    'User-Agent': 'Duranlux-Updater'
-                }
-            };
-
-            if (updateInfo.download_token && (parsedUrl.hostname === 'api.github.com' || parsedUrl.hostname === 'github.com')) {
-                options.headers['Authorization'] = 'token ' + updateInfo.download_token;
-                options.headers['Accept'] = 'application/octet-stream';
-            }
-
-            protocol.get(options, (response) => {
-                if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-                    download(response.headers.location);
-                    return;
-                }
-
-                if (response.statusCode !== 200) {
-                    safeError(new Error(`Sunucu durum kodu döndürdü: ${response.statusCode}`));
-                    return;
-                }
-
-                const totalBytes = parseInt(response.headers['content-length'], 10) || 0;
-                let downloadedBytes = 0;
-                const fileStream = fs.createWriteStream(destPath);
-
-                fileStream.on('error', (err) => {
-                    fileStream.destroy();
-                    fs.unlink(destPath, () => {});
-                    safeError(err);
-                });
-
-                fileStream.on('finish', () => {
-                    safeSuccess();
-                });
-
-                response.on('data', (chunk) => {
-                    downloadedBytes += chunk.length;
-                    if (fileStream.writable) {
-                        fileStream.write(chunk);
-                    }
-                    if (totalBytes > 0) {
-                        const progress = Math.round((downloadedBytes / totalBytes) * 100);
-                        onProgress(progress);
-                    } else {
-                        onProgress(-1);
-                    }
-                });
-
-                response.on('end', () => {
-                    if (fileStream.writable) {
-                        fileStream.end();
-                    }
-                });
-
-                response.on('error', (err) => {
-                    if (fileStream.writable) {
-                        fileStream.destroy();
-                    }
-                    fs.unlink(destPath, () => {});
-                    safeError(err);
-                });
-            }).on('error', (err) => {
-                safeError(err);
-            });
-        }
-
-        download(url);
-    }
-
-    downloadFile(
-        updateInfo.url,
-        tempUpdateExe,
-        (progress) => {
-            if (progress >= 0) {
-                if (progressBar) progressBar.style.width = `${progress}%`;
-                if (progressText) progressText.textContent = `${progress}%`;
-            } else {
-                if (progressBar) progressBar.style.width = `100%`;
-                if (progressText) progressText.textContent = `İndiriliyor...`;
-            }
-        },
-        () => {
-            // Success callback: run powershell update splash and quit
-
-            // İndirme başarıyla tamamlandıktan sonra hesaptan çıkış yap
-            if (currentUsername) {
-                const localToken = appStorage.getItem('duran_cafe_session');
-                if (localToken) {
-                    db.ref(`users/${currentUsername}/sessions/${localToken}`).remove();
-                }
-                appStorage.removeItem('duran_cafe_user');
-                appStorage.removeItem('duran_cafe_session');
-            }
-
-            const runningExePath = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
-            const dirName = path.dirname(runningExePath);
-            const baseName = path.basename(runningExePath);
-            
-            // Do NOT change the executable name to prevent portable Chromium profile reset
-            const targetExePath = runningExePath;
-
-            // Escape paths for single-quoted strings in powershell
-            const runningExeEscaped = runningExePath.replace(/'/g, "''");
-            const tempUpdateExeEscaped = tempUpdateExe.replace(/'/g, "''");
-            const targetExeEscaped = targetExePath.replace(/'/g, "''");
-
-            // Read the logo from local resources to embed it as base64
-            let base64Logo = '';
-            try {
-                const iconPath = path.join(__dirname, 'icon.png');
-                if (fs.existsSync(iconPath)) {
-                    base64Logo = fs.readFileSync(iconPath).toString('base64');
-                }
-            } catch (e) {
-                console.error("Logo base64 okuma hatasi:", e);
-            }
-
-            const ps1Content = `Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-$form = New-Object System.Windows.Forms.Form
-$form.Text = "Duranlux Adisyon G" + [char]0xfc + "ncelleme"
-$form.Width = 500
-$form.Height = 300
-$form.FormBorderStyle = 0
-$form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-$form.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#232129')
-$form.TopMost = $true
-
-# PictureBox for Logo
-$logoPic = New-Object System.Windows.Forms.PictureBox
-$logoPic.Width = 90
-$logoPic.Height = 90
-$logoPic.Left = (500 - 90) / 2
-$logoPic.Top = 45
-$logoPic.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-
-$base64Logo = "${base64Logo}"
-if ($base64Logo) {
-    try {
-        $bytes = [System.Convert]::FromBase64String($base64Logo)
-        $ms = New-Object System.IO.MemoryStream($bytes, 0, $bytes.Length)
-        $logoImg = [System.Drawing.Image]::FromStream($ms)
-        $logoPic.Image = $logoImg
-    } catch {}
-}
-$form.Controls.Add($logoPic)
-
-# Title Label
-$titleLabel = New-Object System.Windows.Forms.Label
-$titleLabel.Text = "Duranlux Adisyon"
-$titleLabel.ForeColor = [System.Drawing.Color]::White
-$titleLabel.Font = New-Object System.Drawing.Font("Segoe UI", 22, [System.Drawing.FontStyle]::Bold)
-$titleLabel.Width = 500
-$titleLabel.Height = 40
-$titleLabel.Top = 150
-$titleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-$form.Controls.Add($titleLabel)
-
-# Subtitle Label
-$subText = "G" + [char]0xfc + "ncelleme devam ediyor. L" + [char]0xfc + "tfen bekleyiniz..."
-$subLabel = New-Object System.Windows.Forms.Label
-$subLabel.Text = $subText
-$subLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml('#cccccc')
-$subLabel.Font = New-Object System.Drawing.Font("Segoe UI", 12)
-$subLabel.Width = 500
-$subLabel.Height = 30
-$subLabel.Top = 195
-$subLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-$form.Controls.Add($subLabel)
-
-# GDI+ Animated dot spinner variables and timer
-$script:angleIndex = 0
-$timer = New-Object System.Windows.Forms.Timer
-$timer.Interval = 100
-$timer.add_Tick({
-    $script:angleIndex = ($script:angleIndex + 1) % 8
-    $form.Invalidate()
-})
-
-$form.add_Paint({
-    param($sender, $e)
-    $g = $e.Graphics
-    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-    
-    $centerX = 250
-    $centerY = 255
-    $radius = 16
-    
-    for ($i = 0; $i -lt 8; $i++) {
-        $angle = ($i * 45) * [Math]::PI / 180
-        $x = $centerX + $radius * [Math]::Cos($angle)
-        $y = $centerY + $radius * [Math]::Sin($angle)
+    function downloadFile(fileName, cb) {
+        const dest = path.join(__dirname, fileName);
+        const url = 'https://raw.githubusercontent.com/Duranlux/duranlux-pos-updates/main/' + fileName;
         
-        $diff = (8 + $i - $script:angleIndex) % 8
-        $alpha = 255 - ($diff * 28)
-        if ($alpha -lt 30) { $alpha = 30 }
-        
-        $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb($alpha, 16, 185, 129))
-        $g.FillEllipse($brush, [float]($x - 4), [float]($y - 4), 8, 8)
-        $brush.Dispose()
-    }
-})
-
-# Use a Timer instead of BackgroundWorker to avoid PowerShell runspace threading issues
-$script:waitStep = 0
-$script:attempt = 0
-$script:deleted = $false
-
-$workTimer = New-Object System.Windows.Forms.Timer
-$workTimer.Interval = 1000
-$workTimer.add_Tick({
-    $script:waitStep++
-    
-    # Wait 3 seconds for the main application to fully exit
-    if ($script:waitStep -le 3) {
-        return
-    }
-    
-    $runningExe = '${runningExeEscaped}'
-    $tempUpdateExe = '${tempUpdateExeEscaped}'
-    $targetExe = '${targetExeEscaped}'
-
-    if (-not $script:deleted) {
-        try {
-            if (Test-Path -LiteralPath $runningExe) {
-                Remove-Item -LiteralPath $runningExe -Force -ErrorAction Stop
-            }
-            $script:deleted = $true
-        } catch {
-            $script:attempt++
-            if ($script:attempt -ge 20) {
-                # Failed to delete after 20 seconds, give up and launch original
-                $workTimer.Stop()
+        https.get(url, { headers: { 'User-Agent': 'Duranlux-Updater', 'Cache-Control': 'no-cache' } }, (res) => {
+            if (res.statusCode !== 200) return cb(new Error('HTTP ' + res.statusCode));
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
                 try {
-                    $psi = New-Object System.Diagnostics.ProcessStartInfo
-                    $psi.FileName = $targetExe
-                    $psi.UseShellExecute = $true
-                    $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Normal
-                    [System.Diagnostics.Process]::Start($psi)
-                } catch {}
-                $form.Close()
-            }
-            return
-        }
+                    fs.writeFileSync(dest, data, 'utf-8');
+                    cb(null);
+                } catch(e) { cb(e); }
+            });
+        }).on('error', cb);
     }
-    
-    if ($script:deleted) {
-        $workTimer.Stop()
-        for ($i = 0; $i -lt 10; $i++) {
-            try {
-                Copy-Item -LiteralPath $tempUpdateExe -Destination $targetExe -Force -ErrorAction Stop
-                break
-            } catch {
-                Start-Sleep -Milliseconds 500
-            }
-        }
-        
-        try {
-            # Launch updated executable and capture the process object
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = $targetExe
-            $psi.UseShellExecute = $false
-            $p = [System.Diagnostics.Process]::Start($psi)
-            
-            # Close the form smoothly after 6 seconds to cover NSIS extraction and cold boot
-            $closeTimer = New-Object System.Windows.Forms.Timer
-            $closeTimer.Interval = 6000
-            $closeTimer.add_Tick({
-                $closeTimer.Stop()
-                $form.Close()
-            })
-            $closeTimer.Start()
-        } catch {
-            $form.Close()
-        }
-    }
-})
 
-$form.add_Shown({
-    $timer.Start()
-    $workTimer.Start()
-})
-
-[System.Windows.Forms.Application]::Run($form)
-`;
-            try {
-                fs.writeFileSync(ps1Path, '\ufeff' + ps1Content, 'utf-8');
-                
-                // Spawn detached powershell script via cmd.exe start.
-                // This is CRITICAL for NSIS portable apps: 'start' breaks the new process out of the 
-                // parent's Job Object, preventing it from being killed when Electron exits!
-                // We use /min to minimize the cmd window flash, and powershell -WindowStyle Hidden hides the rest.
-                const child = spawn('cmd.exe', [
-                    '/c', 'start', '""', '/min', 'powershell.exe', 
-                    '-ExecutionPolicy', 'Bypass', 
-                    '-WindowStyle', 'Hidden', 
-                    '-File', ps1Path
-                ], {
-                    detached: true,
-                    stdio: 'ignore'
-                });
-                child.unref();
-
-                // Terminate Electron immediately
-                ipcRenderer.send('quit-app');
-            } catch (err) {
+    filesToUpdate.forEach(file => {
+        downloadFile(file, (err) => {
+            if (hasError) return;
+            if (err) {
+                hasError = true;
                 if (progressOverlay) progressOverlay.style.display = 'none';
-                showCustomAlert("Güncelleme betiği başlatılamadı: " + err.message, "Güncelleme Hatası");
+                showCustomAlert("Güncelleme dosyası indirilemedi: " + file, "Güncelleme Hatası");
+                return;
             }
-        },
-        (err) => {
-            // Error callback
-            if (progressOverlay) progressOverlay.style.display = 'none';
-            showCustomAlert("Dosya indirilemedi: " + err.message, "Güncelleme Hatası");
-        }
-    );
+            downloaded++;
+            const pct = Math.round((downloaded / filesToUpdate.length) * 100);
+            if (progressBar) progressBar.style.width = pct + '%';
+            if (progressText) progressText.textContent = pct + '%';
+
+            if (downloaded === filesToUpdate.length) {
+                if (progressText) progressText.textContent = 'Yeniden başlatılıyor...';
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            }
+        });
+    });
 }
 
 function setupRealtimeSecurityListener(username) {

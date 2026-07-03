@@ -1,24 +1,25 @@
-window.process = {
-    env: {},
-    platform: 'web'
-};
-window.require = function(mod) {
-    if (mod === 'path') return { join: function(...args) { return args.join('/'); }, extname: () => '', basename: () => '', dirname: () => '' };
-    if (mod === 'fs') return { existsSync: () => false, mkdirSync: () => {}, readFileSync: () => '{}', writeFileSync: () => {} };
-    if (mod === 'os') return { homedir: () => '/home' };
-    if (mod === 'child_process') return { spawn: () => ({ on: () => {} }) };
-    if (mod === 'https' || mod === 'http') return { get: () => ({ on: () => {} }) };
-    if (mod === 'url') return {};
-    if (mod === 'electron') return { ipcRenderer: { send: () => {}, on: () => {}, invoke: async () => {} }, remote: {} };
-    if (mod === '@electron/remote') return { app: null };
-    console.log("Mocking require:", mod);
-    return new Proxy({}, {
-        get: function(target, prop) {
-            return function() {};
-        }
-    });
-};
-window.module = { exports: {} };
+if (typeof window.process === 'undefined') {
+    window.process = { env: {}, platform: 'web' };
+} else if (!window.process.env) {
+    window.process.env = {};
+}
+if (typeof window.require === 'undefined') {
+    window.require = function(mod) {
+        if (mod === 'path') return { join: function(...args) { return args.join('/'); }, extname: () => '', basename: () => '', dirname: () => '' };
+        if (mod === 'fs') return { existsSync: () => false, mkdirSync: () => {}, readFileSync: () => '{}', writeFileSync: () => {} };
+        if (mod === 'os') return { homedir: () => '/home' };
+        if (mod === 'child_process') return { spawn: () => ({ on: () => {} }) };
+        if (mod === 'https' || mod === 'http') return { get: () => ({ on: () => {} }) };
+        if (mod === 'url') return {};
+        if (mod === 'electron') return { ipcRenderer: { send: () => {}, on: () => {}, invoke: async () => {} }, remote: {} };
+        if (mod === '@electron/remote') return { app: null };
+        console.log("Mocking require:", mod);
+        return new Proxy({}, { get: function() { return function() {}; } });
+    };
+}
+if (typeof window.module === 'undefined') {
+    window.module = { exports: {} };
+}
 
 // =========================================================================
 // FIREBASE CONFIGURATION

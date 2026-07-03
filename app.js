@@ -623,99 +623,115 @@ function checkAndModifyProductsForVersion(username) {
     }
 }
 
+window.triggerUpdateFlow = startUpdateDownload;
+
 function checkForUpdates(username = null) {
     if (!isFirebaseInitialized) return;
 
-    // Fetch latest package.json from github main branch
-    const https = window.require('https');
-    https.get('https://raw.githubusercontent.com/Duranlux/duranlux-pos-updates/main/package.json', { headers: { 'Cache-Control': 'no-cache' } }, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-            try {
-                const pkg = JSON.parse(data);
-                if (pkg.version && isNewerVersion(APP_VERSION, pkg.version)) {
-                    updateInfo = { 
-                        version: pkg.version, 
-                        url: 'source_update' 
-                    };
-                    const updateBadge = document.getElementById('update-badge');
-                    if (updateBadge) {
-                        updateBadge.style.display = 'flex';
-                        updateBadge.textContent = "Güncelleme Mevcut (" + pkg.version + ")";
-                    }
-                }
-            } catch (e) {
-                console.error("Guncelleme kontrol hatasi:", e);
+    db.ref('updates').once('value').then(snap => {
+        const data = snap.val();
+        if (data && data.currentVersion && isNewerVersion(APP_VERSION, data.currentVersion)) {
+            updateInfo = { 
+                version: data.currentVersion, 
+                url: data.downloadUrl,
+                token: data.download_token
+            };
+            const updateBadge = document.getElementById('update-badge');
+            if (updateBadge) {
+                updateBadge.style.display = 'flex';
+                updateBadge.textContent = "Güncelleme Mevcut (" + data.currentVersion + ")";
             }
-        });
-    }).on('error', (err) => {
+        }
+    }).catch(err => {
         console.error("Guncelleme kontrol hatasi:", err);
     });
 }
 
 function processUpdateCheck(data) {
-    // Deprecated, no longer used with Github raw fetching.
+    // Deprecated
 }
 
 function startUpdateDownload() {
-    if (!updateInfo) return;
+    if (!updateInfo || !updateInfo.url) return;
 
     const fs = window.require('fs');
+    const os = window.require('os');
     const path = window.require('path');
     const https = window.require('https');
+    const { spawn } = window.require('child_process');
 
     const progressOverlay = document.getElementById('update-progress-overlay');
     const progressBar = document.getElementById('update-progress-bar');
     const progressText = document.getElementById('update-progress-text');
     
     if (progressOverlay) progressOverlay.style.display = 'flex';
-    if (progressBar) progressBar.style.width = '10%';
-    if (progressText) progressText.textContent = 'Güncelleme indiriliyor...';
+    if (progressBar) progressBar.style.width = '2%';
+    if (progressText) progressText.textContent = 'Güncelleme hazırlanıyor...';
 
-    const filesToUpdate = ['app.js', 'index.html', 'style.css', 'package.json', 'apply_updates.js'];
-    let downloaded = 0;
-    let hasError = false;
+    const exeName = `duranlux-update-${updateInfo.version}.exe`;
+    const destPath = path.join(os.tmpdir(), exeName);
 
-    function downloadFile(fileName, cb) {
-        const dest = path.join(__dirname, fileName);
-        const url = 'https://raw.githubusercontent.com/Duranlux/duranlux-pos-updates/main/' + fileName;
-        
-        https.get(url, { headers: { 'User-Agent': 'Duranlux-Updater', 'Cache-Control': 'no-cache' } }, (res) => {
-            if (res.statusCode !== 200) return cb(new Error('HTTP ' + res.statusCode));
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                try {
-                    fs.writeFileSync(dest, data, 'utf-8');
-                    cb(null);
-                } catch(e) { cb(e); }
-            });
-        }).on('error', cb);
+    if (fs.existsSync(destPath)) {
+        try { fs.unlinkSync(destPath); } catch (e) {}
     }
 
-    filesToUpdate.forEach(file => {
-        downloadFile(file, (err) => {
-            if (hasError) return;
-            if (err) {
-                hasError = true;
+    const file = fs.createWriteStream(destPath);
+
+    function fetchUrl(urlToFetch) {
+        https.get(urlToFetch, { headers: { 'User-Agent': 'Duranlux-Updater' } }, (res) => {
+            if (res.statusCode === 301 || res.statusCode === 302) {
+                return fetchUrl(res.headers.location);
+            }
+            
+            if (res.statusCode !== 200) {
+                fs.unlink(destPath, () => {});
                 if (progressOverlay) progressOverlay.style.display = 'none';
-                showCustomAlert("Güncelleme dosyası indirilemedi: " + file, "Güncelleme Hatası");
+                showCustomAlert("Güncelleme dosyası indirilemedi (HTTP " + res.statusCode + ")", "Güncelleme Hatası");
                 return;
             }
-            downloaded++;
-            const pct = Math.round((downloaded / filesToUpdate.length) * 100);
-            if (progressBar) progressBar.style.width = pct + '%';
-            if (progressText) progressText.textContent = pct + '%';
+            
+            const totalSize = parseInt(res.headers['content-length'], 10);
+            let downloadedSize = 0;
 
-            if (downloaded === filesToUpdate.length) {
+            res.on('data', chunk => {
+                downloadedSize += chunk.length;
+                if (totalSize) {
+                    const pct = Math.round((downloadedSize / totalSize) * 100);
+                    if (progressBar) progressBar.style.width = pct + '%';
+                    if (progressText) progressText.textContent = pct + '% - İndiriliyor...';
+                }
+            });
+
+            res.pipe(file);
+
+            file.on('finish', () => {
+                file.close();
                 if (progressText) progressText.textContent = 'Yeniden başlatılıyor...';
+                
                 setTimeout(() => {
-                    location.reload();
+                    try {
+                        const child = spawn(destPath, [], {
+                            detached: true,
+                            stdio: 'ignore'
+                        });
+                        child.unref();
+                        
+                        const { ipcRenderer } = window.require('electron');
+                        ipcRenderer.send('quit-app');
+                    } catch (e) {
+                        showCustomAlert("Güncelleme başlatılamadı: " + e.message, "Hata");
+                        if (progressOverlay) progressOverlay.style.display = 'none';
+                    }
                 }, 1000);
-            }
+            });
+        }).on('error', (err) => {
+            fs.unlink(destPath, () => {});
+            if (progressOverlay) progressOverlay.style.display = 'none';
+            showCustomAlert("İndirme sırasında bir hata oluştu: " + err.message, "Güncelleme Hatası");
         });
-    });
+    }
+
+    fetchUrl(updateInfo.url);
 }
 
 function setupRealtimeSecurityListener(username) {

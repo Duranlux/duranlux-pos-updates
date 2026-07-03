@@ -1,14 +1,38 @@
 {
   "name": "duranlux-pos",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "build:exe": "electron-builder --win"
   },
   "dependencies": {
     "firebase": "^10.12.2"
   },
   "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3",
     "vite": "^5.0.0"
+  },
+  "main": "main.js",
+  "build": {
+    "appId": "com.duranlux.pos",
+    "productName": "Duranlux Adisyon",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "portable": {
+      "artifactName": "Duranlux_Adisyon_v${version}.exe"
+    },
+    "asar": true,
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Duranlux_Adisyon_Setup_v${version}.exe"
+    },
+    "compression": "store"
   }
 }

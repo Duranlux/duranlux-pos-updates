@@ -1,0 +1,14 @@
+{
+  "name": "duranlux-pos",
+  "version": "1.4.1",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "firebase": "^10.12.2"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

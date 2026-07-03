@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duranlux Adisyon</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+</head>
+<body>
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-header">
+                <span class="login-logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-coffee"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+                </span>
+                <h2>Duranlux Adisyon</h2>
+                <p>İşletme Hesabına Giriş</p>
+            </div>
+            <form id="login-form" onsubmit="handleLoginSubmit(event)">
+                <div class="form-group">
+                    <label for="login-username">İşletme Kullanıcı Adı</label>
+                    <input type="text" id="login-username" required placeholder="Örn: sekizcafe" autocomplete="username" class="login-input">
+                </div>
+                <div class="form-group" style="margin-top: 14px;">
+                    <label for="login-password">Şifre</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="login-password" required placeholder="Şifrenizi girin" autocomplete="current-password" class="login-input">
+                        <button type="button" id="btn-toggle-password" class="btn-toggle-password" onclick="togglePasswordVisibility()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                    <div id="login-error-msg" style="display: none; color: #ef4444; font-size: 0.85rem; margin-top: 8px; text-align: center; font-weight: 500;">
+                        Kullanıcı adı veya şifre hatalı. Kontrol edip tekrar deneyiniz.
+                    </div>
+                </div>
+                <button type="submit" id="btn-login-submit" class="btn-login" style="margin-top: 24px;">
+                    <span>GİRİŞ YAP</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER (Hidden until authenticated) -->
+    <div id="app-container" class="app-container" style="display: none;">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="logo-area">
+                <span class="logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-coffee"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+                </span>
+                <div class="logo-text">
+                    <h1 id="header-business-name">Duranlux Adisyon</h1>
+                    <p>Pratik Kasa & Hızlı Adisyon v1.4.1</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div id="update-badge" class="update-badge" style="display: none;" onclick="triggerUpdateFlow()">🎁 Güncelleme Mevcut</div>
+                
+                <div class="time-theme-group" style="display: flex; align-items: center; gap: 10px;">
+                    <button id="btn-theme-toggle" class="btn-theme-toggle" onclick="toggleTheme()" title="Aydınlık/Karanlık Tema">
+                        <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                        <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-moon" style="display: none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    </button>
+                    <div id="current-time" class="current-time">13:58</div>
+                </div>
+                <div class="tab-buttons">
+                    <button id="btn-tab-admin" class="tab-button" onclick="switchTab('admin')" style="display: none;">
+                        <span class="btn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: translateY(2px);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </span> Müşteriler
+                    </button>
+                    <button id="btn-tab-pos" class="tab-button active" onclick="switchTab('pos')">
+                        <span class="btn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-shopping-bag" style="transform: translateY(2px);"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                        </span> Satış Ekranı
+                    </button>
+                    <button id="btn-tab-settings" class="tab-button" onclick="switchTab('settings')">
+                        <span class="btn-icon">✏️</span> Düzenle
+                    </button>
+                    <button id="btn-tab-reports" class="tab-button" onclick="switchTab('reports')">
+                        <span class="btn-icon">📈</span> Raporlar
+                    </button>
+                    <button id="btn-tab-contact" class="tab-button" onclick="switchTab('contact')">
+                        <span class="btn-icon">📞</span> İletişim
+                    </button>
+                    <button class="tab-button logout" onclick="triggerManualLogout()" style="border-color: rgba(239, 68, 68, 0.2); color: var(--accent-red);">
+                        <span class="btn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: translateY(2px);"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                        </span> Çıkış
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="app-main">
+            
+            <!-- SECTION 1: POS (SALES SCREEN) -->
+            <section id="tab-content-pos" class="tab-content active">
+                <div class="pos-grid">
+                    
+                    <!-- Left: Product Grid -->
+                    <div class="products-panel">
+                        <div class="panel-header">
+                            <h2>Ürünler</h2>
+                            <div class="category-filters" id="category-filters">
+                                <!-- Dynamic category filters will be loaded by JS -->
+                            </div>
+                        </div>
+                        <div class="products-grid" id="products-grid">
+                            <!-- Products will be generated dynamically by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Right: Cart & Calculation Panel -->
+                    <div class="checkout-panel">
+                        
+                        <!-- Cart Items List -->
+                        <div class="cart-section">
+                            <div class="panel-header-mini">
+                                <h3>Adisyon (Sipariş)</h3>
+                                <button class="btn-clear-cart" onclick="clearCart()">Siparişi Temizle</button>
+                            </div>
+                            <div class="cart-items-container" id="cart-items">
+                                <!-- Cart items will be loaded here dynamically -->
+                                <div class="cart-empty-message">Adisyon boş. Ürün eklemek için soldaki butonlara dokunun.</div>
+                            </div>
+                        </div>
+
+                        <!-- Payment & Change Section -->
+                        <div class="payment-section">
+                            <!-- Totals -->
+                            <div class="totals-box">
+                                <div class="total-row">
+                                    <span>Toplam Tutar:</span>
+                                    <span class="total-price" id="cart-total">0.00 TL</span>
+                                </div>
+                            </div>
+
+                            <!-- Cash Calculation -->
+                            <div class="cash-calc-grid">
+                                <div class="input-display-group">
+                                    <label for="cash-received">Alınan Para (TL)</label>
+                                    <div class="input-with-clear">
+                                        <input type="number" id="cash-received" placeholder="0" class="cash-input" min="0" step="any" inputmode="decimal">
+                                        <button class="btn-clear-cash" onclick="clearCashInput()" title="Temizle">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="change-display-group">
+                                    <label>Para Üstü</label>
+                                    <div class="change-amount positive" id="change-amount">0.00 TL</div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Cash Buttons -->
+                            <div class="quick-cash-container">
+                                <button class="quick-cash-btn" onclick="addQuickCashValue('exact')">Tam</button>
+                                <button class="quick-cash-btn" onclick="addQuickCashValue(10)">10 TL</button>
+                                <button class="quick-cash-btn" onclick="addQuickCashValue(20)">20 TL</button>
+                                <button class="quick-cash-btn" onclick="addQuickCashValue(50)">50 TL</button>
+                                <button class="quick-cash-btn" onclick="addQuickCashValue(100)">100 TL</button>
+                                <button class="quick-cash-btn" onclick="addQuickCashValue(200)">200 TL</button>
+                                <button class="quick-cash-btn" onclick="addQuickCashValue(500)">500 TL</button>
+                            </div>
+
+                            <!-- Checkout Action Button -->
+                            <button class="btn-complete-payment" onclick="completePayment()">
+                                <span>ÖDEMEYİ TAMAMLA</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: REPORTS & ANALYTICS -->
+            <section id="tab-content-reports" class="tab-content">
+                <div class="reports-grid">
+                    
+                    <!-- Top Summary Widgets -->
+                    <div class="summary-widgets">
+                        <div class="widget-card">
+                            <h3>Bugünkü Satış</h3>
+                            <div class="widget-value" id="rep-today">0.00 TL</div>
+                        </div>
+                        <div class="widget-card">
+                            <h3>Dünkü Satış</h3>
+                            <div class="widget-value" id="rep-yesterday">0.00 TL</div>
+                        </div>
+                        <div class="widget-card">
+                            <h3>Tüm Zamanlar</h3>
+                            <div class="widget-value" id="rep-alltime">0.00 TL</div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Details: Popular Products & Sales Log -->
+                    <div class="reports-details-grid">
+                        
+                        <!-- Top Products Chart (Native CSS) -->
+                        <div class="admin-card">
+                            <h2>En Çok Satan Ürünler</h2>
+                            <div class="chart-container" id="top-products-chart">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Recent Transactions -->
+                        <div class="admin-card">
+                            <div class="card-header-flex">
+                                <h2>Son Satışlar (Adisyon Geçmişi)</h2>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <button class="btn-delete-selected" onclick="deleteSelectedNormalSales()" id="btn-delete-normal-sales" style="display: none;" title="Seçilileri Sil">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                    <button class="btn-detailed-reports" onclick="openDetailedReportsModal()">Detaylı Satış Raporları</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 8px; text-align: left;">
+                                <span id="normal-sales-counter" style="font-size: 0.95rem; font-weight: 500; color: var(--accent-blue); display: none;"></span>
+                            </div>
+                            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                                <table class="products-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40px;"><input type="checkbox" id="select-all-normal-sales" onchange="toggleSelectAllNormalSales()"></th>
+                                            <th>Zaman</th>
+                                            <th>Tutar</th>
+                                            <th>Ürünler</th>
+                                            <th style="width: 50px;">Detay</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-sales-body">
+                                        <!-- Populated dynamically by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: SETTINGS (Düzenle) -->
+            <section id="tab-content-settings" class="tab-content">
+                <div class="settings-sub-header">
+                    <button id="btn-sub-products" class="sub-tab-button active" onclick="switchSettingsSubTab('products')" style="font-size: 1.2rem; padding: 12px 24px;">Ürün Ayarları</button>
+                    <button id="btn-sub-categories" class="sub-tab-button" onclick="switchSettingsSubTab('categories')" style="font-size: 1.2rem; padding: 12px 24px;">Kategori Ayarları</button>
+                </div>
+
+                <!-- Products Sub-View -->
+                <div id="settings-view-products" class="settings-view active">
+                    <div class="admin-grid">
+                    
+                    <!-- Left Column: Product Form -->
+                    <div class="admin-sidebar">
+                        <div class="admin-card">
+                            <h2 id="form-title">Yeni Ürün Ekle</h2>
+                            <form id="product-form" onsubmit="saveProduct(event)">
+                                <input type="hidden" id="edit-product-id" value="">
+                                
+                                <div class="form-group" style="position: relative;">
+                                    <label for="product-name">Ürün Adı</label>
+                                    <input type="text" id="product-name" required placeholder="Örn: Türk Kahvesi" autocomplete="off">
+                                    <div id="product-name-suggestions" class="autocomplete-suggestions" style="display: none;"></div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="product-price">Fiyat (TL)</label>
+                                    <input type="number" id="product-price" step="0.25" min="0" required placeholder="0.00">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="product-category">Kategori</label>
+                                    <select id="product-category" required>
+                                        <!-- Dynamic categories loaded by JS -->
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="display: none;">
+                                    <label for="product-color">Buton Rengi</label>
+                                    <div class="color-picker-grid">
+                                        <label class="color-option" style="background-color: var(--btn-coffee); color: #ffffff;">
+                                            <input type="radio" name="product-color" value="var(--btn-coffee)" checked>
+                                            <span>Kahve</span>
+                                        </label>
+                                        <label class="color-option" style="background-color: var(--btn-teal); color: #111827;">
+                                            <input type="radio" name="product-color" value="var(--btn-teal)">
+                                            <span>Turkuaz</span>
+                                        </label>
+                                        <label class="color-option" style="background-color: var(--btn-orange); color: #ffffff;">
+                                            <input type="radio" name="product-color" value="var(--btn-orange)">
+                                            <span>Turuncu</span>
+                                        </label>
+                                        <label class="color-option" style="background-color: var(--btn-blue); color: #ffffff;">
+                                            <input type="radio" name="product-color" value="var(--btn-blue)">
+                                            <span>Mavi</span>
+                                        </label>
+                                        <label class="color-option" style="background-color: var(--btn-purple); color: #ffffff;">
+                                            <input type="radio" name="product-color" value="var(--btn-purple)">
+                                            <span>Mor</span>
+                                        </label>
+                                        <label class="color-option" style="background-color: var(--btn-green); color: #111827;">
+                                            <input type="radio" name="product-color" value="var(--btn-green)">
+                                            <span>Yeşil</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions" style="margin-top: 15px;">
+                                    <button type="submit" class="btn-save">Ürünü Kaydet</button>
+                                    <button type="button" class="btn-cancel" onclick="resetProductForm()">Vazgeç</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Products List Table/Card -->
+                    <div class="admin-card product-list-card">
+                        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="margin-bottom: 0;">Mevcut Ürünler <span id="products-selected-count" style="color: var(--text-muted); font-size: 0.95rem; margin-left: 10px; font-weight: normal;"></span></h2>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn-detailed-reports" onclick="addSelectedToFavorites()" id="btn-bulk-add-favorites" style="display: inline-block; margin-bottom: 0; background: var(--btn-teal); color: #111827; padding: 10px 16px; font-size: 1rem;">Favoriler'e Ekle</button>
+                                <button class="btn-detailed-reports" onclick="autoAddImagesToSelected()" id="btn-bulk-auto-image" style="display: inline-block; margin-bottom: 0; background: var(--btn-orange); color: #ffffff; padding: 10px 16px; font-size: 1rem;">Oto. Görsel Ekle</button>
+                                <button class="btn-detailed-reports" onclick="openBulkEditProductsModal()" id="btn-bulk-edit-products" style="display: inline-block; margin-bottom: 0; padding: 10px 16px; font-size: 1rem;">Toplu Düzenle</button>
+                                <button class="btn-delete-selected" onclick="deleteSelectedProductsBulk()" id="btn-delete-products" style="display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; padding: 0;" title="Seçilileri Sil">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="search-filter-bar" style="display: flex; gap: 12px; margin-bottom: 16px;">
+                            <div style="flex: 1; position: relative;">
+                                <input type="text" id="search-products" placeholder="Ürün Ara..." oninput="searchProductsList()" style="width: 100%; height: 44px; padding: 0 16px 0 40px; font-size: 1rem; border-radius: var(--border-radius-md); border: 2px solid var(--panel-border); background-color: rgba(0,0,0,0.2); color: white;">
+                                <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1.1rem;">🔍</span>
+                            </div>
+                            <select id="filter-product-category" onchange="renderAdminProducts()" style="width: 180px; height: 44px; padding: 0 16px; font-size: 1rem; border-radius: var(--border-radius-md); border: 2px solid var(--panel-border); background-color: rgba(0,0,0,0.2); color: white; cursor: pointer;">
+                                <option value="all">Tüm Kategoriler</option>
+                            </select>
+                        </div>
+                        <div class="table-container">
+                            <table class="products-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;"><input type="checkbox" id="select-all-products" onchange="toggleSelectAllProducts()"></th>
+                                        <th style="padding: 16px; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 1.1rem; width: 10%;">Görsel</th>
+                                        <th style="padding: 16px; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 1.1rem; width: 25%;">Ürün Adı</th>
+                                        <th>Fiyat</th>
+                                        <th>Kategori</th>
+                                        <th class="actions-header">İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="product-list-body">
+                                    <!-- Dynamic product list loaded by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- Categories Sub-View -->
+                <div id="settings-view-categories" class="settings-view" style="display: none;">
+                    <div class="admin-grid">
+                        <!-- Left Column: Add Category Form -->
+                        <div class="admin-sidebar">
+                            <div class="admin-card">
+                                <h2>Yeni Kategori Ekle</h2>
+                                <form id="category-form" onsubmit="saveCategory(event)">
+                                    <div class="form-group">
+                                        <label for="category-name">Kategori Adı</label>
+                                        <input type="text" id="category-name" required placeholder="Yeni Kategori Adı" autocomplete="off">
+                                    </div>
+                                    <div class="form-group" style="margin-top: 14px;">
+                                        <label>Kategori Rengi</label>
+                                        <div class="color-picker-grid">
+                                            <label class="color-option" style="background-color: var(--btn-coffee); color: #ffffff;">
+                                                <input type="radio" name="category-color" value="var(--btn-coffee)" checked>
+                                                <span>Kahve</span>
+                                            </label>
+                                            <label class="color-option" style="background-color: var(--btn-teal); color: #111827;">
+                                                <input type="radio" name="category-color" value="var(--btn-teal)">
+                                                <span>Turkuaz</span>
+                                            </label>
+                                            <label class="color-option" style="background-color: var(--btn-orange); color: #ffffff;">
+                                                <input type="radio" name="category-color" value="var(--btn-orange)">
+                                                <span>Turuncu</span>
+                                            </label>
+                                            <label class="color-option" style="background-color: var(--btn-blue); color: #ffffff;">
+                                                <input type="radio" name="category-color" value="var(--btn-blue)">
+                                                <span>Mavi</span>
+                                            </label>
+                                            <label class="color-option" style="background-color: var(--btn-purple); color: #ffffff;">
+                                                <input type="radio" name="category-color" value="var(--btn-purple)">
+                                                <span>Mor</span>
+                                            </label>
+                                            <label class="color-option" style="background-color: var(--btn-green); color: #111827;">
+                                                <input type="radio" name="category-color" value="var(--btn-green)">
+                                                <span>Yeşil</span>
+                                            </label>
+                                            <label class="color-option" style="background-color: #ef4444; color: #ffffff;">
+                                                <input type="radio" name="category-color" value="#ef4444">
+                                                <span>Kırmızı</span>
+                                            </label>
+                                            <label class="color-option" style="background-color: #6b7280; color: #ffffff;">
+                                                <input type="radio" name="category-color" value="#6b7280">
+                                                <span>Gri</span>
+                                            </label>
+                                            <label class="color-option" style="background-color: #ec4899; color: #ffffff;">
+                                                <input type="radio" name="category-color" value="#ec4899">
+                                                <span>Pembe</span>
+                                            </label>
+                                            <label class="color-option" style="background-color: #f59e0b; color: #ffffff;">
+                                                <input type="radio" name="category-color" value="#f59e0b">
+                                                <span>Sarı</span>
+                                            </label>
+                                            <label class="color-option" style="grid-column: span 2; background-color: #374151; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                                <input type="radio" name="category-color" value="#374151" id="category-color-custom-radio">
+                                                <span id="category-custom-color-text">Özel Rengi Seç</span>
+                                                <input type="color" id="category-custom-color-picker" style="width: 28px; height: 24px; border: none; border-radius: 4px; background: none; cursor: pointer; padding: 0;" onchange="updateCategoryCustomColor(this)">
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-actions" style="margin-top: 15px;">
+                                        <button type="submit" class="btn-save">Kategoriyi Ekle</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Categories List -->
+                        <div class="admin-card product-list-card">
+                            <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2 style="margin-bottom: 0;">Mevcut Kategoriler <span id="categories-selected-count" style="color: var(--text-muted); font-size: 0.95rem; margin-left: 10px; font-weight: normal;"></span></h2>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn-detailed-reports" onclick="openBulkEditCategoriesModal()" id="btn-bulk-edit-categories" style="display: inline-block; margin-bottom: 0; padding: 10px 16px; font-size: 1rem;">Toplu Düzenle</button>
+                                    <button class="btn-delete-selected" onclick="deleteSelectedCategoriesBulk()" id="btn-delete-categories" style="display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; padding: 0;" title="Seçilileri Sil">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="table-container">
+                                <table class="products-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40px;"><input type="checkbox" id="select-all-categories" onchange="toggleSelectAllCategories()"></th>
+                                            <th>Kategori Adı</th>
+                                            <th>Renk</th>
+                                            <th class="actions-header">İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="category-list-body">
+                                        <!-- Dynamic category list loaded by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: CONTACT -->
+            <section id="tab-content-contact" class="tab-content">
+                <div class="contact-container">
+                    <div class="contact-card">
+                        <h2>📞 İletişim & Destek</h2>
+                        <p class="contact-desc">Yazılımla ilgili herhangi bir sorun yaşarsanız veya sistemde yapılmasını istediğiniz özel bir güncelleme ya da yeni bir özellik olursa, bize aşağıdaki iletişim kanallarından ulaşabilirsiniz. Talebiniz doğrultusunda hazırlayacağımız güncellemeyi, ekranın sol üst köşesinde belirecek olan 'Güncelleme Mevcut' butonu yardımıyla dilediğiniz zaman kolaylıkla sisteminize uygulayabilirsiniz.</p>
+                        
+                        <div class="contact-links">
+                            <div class="contact-item">
+                                <span class="contact-icon">📞</span>
+                                <div class="contact-info">
+                                    <span class="contact-label">Telefon:</span>
+                                    <span class="contact-value">0546 225 0823</span>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-item" onclick="require('electron').shell.openExternal('https://instagram.com/duranlux.yazilim')" style="cursor: pointer;">
+                                <div class="contact-icon" style="background-image: url('instagram.png'); background-size: cover; background-position: center; border-radius: 50%; width: 56px; height: 56px; display: inline-block;"></div>
+                                <div class="contact-info">
+                                    <span class="contact-label">Instagram:</span>
+                                    <span class="contact-value">@duranlux.yazilim</span>
+                                </div>
+                                <button class="btn-contact-action instagram-btn">Takip Et</button>
+                            </div>
+
+                            <div class="contact-item" onclick="require('electron').shell.openExternal('https://mail.google.com/mail/?view=cm&fs=1&to=duranluxyazilim@gmail.com')" style="cursor: pointer;">
+                                <span class="contact-icon">✉️</span>
+                                <div class="contact-info">
+                                    <span class="contact-label">E-Posta:</span>
+                                    <span class="contact-value">duranluxyazilim@gmail.com</span>
+                                </div>
+                                <button class="btn-contact-action">Mail Gönder</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        
+            <!-- SECTION: ADMIN (Müşteriler) -->
+            <section id="tab-content-admin" class="tab-content">
+                <div class="reports-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+                    <h2>Kullanıcı Yönetimi (Müşteriler)</h2>
+                    <button class="btn-pos" onclick="openCreateUserModal()" style="font-size: 1rem; padding: 12px 24px;">+ Yeni Kullanıcı Oluştur</button>
+                </div>
+                <div class="reports-body" style="overflow-y: auto; padding: 20px;">
+                    <table class="report-table" style="width: 100%; border-collapse: collapse; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px;">
+                        <thead>
+                            <tr style="background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--panel-border);">
+                                <th style="padding: 16px; text-align: left; font-size: 1.1rem;">Kullanıcı Adı</th>
+                                <th style="padding: 16px; text-align: left; font-size: 1.1rem;">Şifre</th>
+                                <th style="padding: 16px; text-align: left; font-size: 1.1rem;">Lisans Bitiş</th>
+                                <th style="padding: 16px; text-align: left; font-size: 1.1rem;">Aktif Oturumlar</th>
+                                <th style="padding: 16px; text-align: right; font-size: 1.1rem;">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- PRODUCT EDIT MODAL -->
+    <div id="product-edit-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>Ürünü Düzenle</h2>
+                <button class="btn-close-modal" onclick="closeProductModal()">×</button>
+            </div>
+            <form id="modal-product-form" onsubmit="saveProductModal(event)">
+                <input type="hidden" id="modal-edit-product-id" value="">
+                
+                <div class="form-group" style="position: relative;">
+                    <label for="modal-product-name">Ürün Adı</label>
+                    <input type="text" id="modal-product-name" required placeholder="Ürün adı girin" autocomplete="off" oninput="markUnsaved()" onchange="markUnsaved()">
+                    <div id="modal-product-name-suggestions" class="autocomplete-suggestions" style="display: none;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="modal-product-price">Fiyat (TL)</label>
+                    <input type="number" id="modal-product-price" step="0.25" min="0" required placeholder="0.00" oninput="markUnsaved()" onchange="markUnsaved()">
+                </div>
+                
+                <div class="form-group">
+                    <label for="modal-product-category">Kategori</label>
+                    <select id="modal-product-category" required onchange="markUnsaved()">
+                        <!-- Loaded dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ürün Görseli</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="hidden" id="modal-product-image" value="">
+                        <div id="modal-product-image-preview-wrapper" style="width: 54px; height: 54px; border-radius: var(--border-radius-md); border: 1px solid var(--panel-border); background: var(--input-bg); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                            <img id="modal-product-image-preview" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                            <span id="modal-product-image-preview-placeholder" style="color: var(--text-muted); font-size: 0.95rem; font-weight: bold;">-</span>
+                        </div>
+                        <button type="button" class="btn-detailed-reports" onclick="autoImageForSingleProduct()" style="margin: 0; padding: 0 16px; background: var(--btn-teal); color: #111827; height: 54px; font-size: 1rem; border-radius: var(--border-radius-md); font-weight: bold; flex: 1;">Oto. Görsel Bul</button>
+                        <button type="button" class="btn-detailed-reports" onclick="triggerSingleImageUpload()" style="margin: 0; padding: 0 16px; background: var(--btn-orange); color: #ffffff; height: 54px; font-size: 1rem; border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Fotoğraf Yükle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        </button>
+                    </div>
+                    <input type="file" id="modal-product-image-upload" accept="image/*" style="display: none;" onchange="uploadSingleProductImage(this)">
+                </div>
+
+                <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px; margin-top: 10px;">
+                    <input type="checkbox" id="modal-product-favorite" style="width: 20px; height: 20px; cursor: pointer; margin-bottom: 0;" onchange="markUnsaved()">
+                    <label for="modal-product-favorite" style="margin-bottom: 0; cursor: pointer;">Favori Ürün</label>
+                </div>
+
+                <div class="form-group" style="display: none;">
+                    <label>Buton Rengi</label>
+                    <div class="color-picker-grid">
+                        <label class="color-option" style="background-color: var(--btn-coffee); color: #ffffff;">
+                            <input type="radio" name="modal-product-color" value="var(--btn-coffee)">
+                            <span>Kahve</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-teal); color: #111827;">
+                            <input type="radio" name="modal-product-color" value="var(--btn-teal)">
+                            <span>Turkuaz</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-orange); color: #ffffff;">
+                            <input type="radio" name="modal-product-color" value="var(--btn-orange)">
+                            <span>Turuncu</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-blue); color: #ffffff;">
+                            <input type="radio" name="modal-product-color" value="var(--btn-blue)">
+                            <span>Mavi</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-purple); color: #ffffff;">
+                            <input type="radio" name="modal-product-color" value="var(--btn-purple)">
+                            <span>Mor</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-green); color: #111827;">
+                            <input type="radio" name="modal-product-color" value="var(--btn-green)">
+                            <span>Yeşil</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-actions" style="margin-top: 20px;">
+                    <button type="submit" class="btn-save">Değişiklikleri Kaydet</button>
+                    <button type="button" class="btn-cancel" onclick="closeProductModal()">Vazgeç</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DETAILED REPORTS MODAL -->
+    <div id="detailed-reports-modal" class="modal-overlay" onclick="attemptCloseModal('detailed-reports-modal')" style="display: none;">
+        <div class="modal-card modal-lg" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>Detaylı Satış Raporları</h2>
+                <button class="btn-close-modal" onclick="closeDetailedReportsModal()">×</button>
+            </div>
+            <div class="detailed-reports-body">
+                <div class="reports-filters">
+                    <select id="detailed-reports-range" onchange="handleDetailedRangeChange()">
+                        <option value="today">Bugün</option>
+                        <option value="yesterday">Dün</option>
+                        <option value="last_week" selected>Son 1 Hafta</option>
+                        <option value="last_month">Son 1 Ay</option>
+                        <option value="last_3_months">Son 3 Ay</option>
+                        <option value="last_year">Son 1 Yıl</option>
+                        <option value="custom">Tarih Aralığı Seçin</option>
+                    </select>
+                    
+                    <div id="custom-date-pickers" style="display: none;">
+                        <input type="date" id="date-start" onchange="loadDetailedReports()">
+                        <span>-</span>
+                        <input type="date" id="date-end" onchange="loadDetailedReports()">
+                    </div>
+                </div>
+
+                <div class="reports-summary-cards">
+                    <div class="summary-card">
+                        <div class="summary-title">Hasılat</div>
+                        <div class="summary-value" id="detailed-revenue">0.00 TL</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-title">Satılan Ürün</div>
+                        <div class="summary-value" id="detailed-items-sold">0</div>
+                    </div>
+                </div>
+
+                <div class="detailed-table-container">
+                    <div class="table-actions-bar">
+                        <h3>Son Satışlar</h3>
+                        <button class="btn-delete-selected" onclick="deleteSelectedSales()" id="btn-delete-sales" style="display: none;" title="Seçilileri Sil">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
+                    </div>
+                    <div style="margin-bottom: 8px; text-align: left;">
+                        <span id="detailed-sales-counter" style="font-size: 0.95rem; font-weight: 500; color: var(--accent-blue); display: none;"></span>
+                    </div>
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"><input type="checkbox" id="select-all-sales" onchange="toggleSelectAllSales()"></th>
+                                <th>Zaman</th>
+                                <th>Tutar</th>
+                                <th>Ürün Özeti</th>
+                                <th style="width: 50px;">Detay</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailed-sales-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="pagination-controls" id="detailed-pagination">
+                        <!-- Pagination buttons -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SALE DETAILS MODAL -->
+    <div id="sale-details-modal" class="modal-overlay" onclick="attemptCloseModal('sale-details-modal')" style="display: none;">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>Sipariş Detayı</h2>
+                <button class="btn-close-modal" onclick="closeSaleDetailsModal()">×</button>
+            </div>
+            <div class="sale-details-body" id="sale-details-content">
+                <!-- Content generated via JS -->
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- CATEGORY EDIT MODAL -->
+    <div id="category-edit-modal" class="modal-overlay" onclick="attemptCloseModal('category-edit-modal')" style="display: none;">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>Kategoriyi Düzenle</h2>
+                <button class="btn-close-modal" onclick="closeCategoryModal()">×</button>
+            </div>
+            <form id="modal-category-form" onsubmit="saveCategoryModal(event)">
+                <input type="hidden" id="modal-edit-category-id" value="">
+                
+                <div class="form-group">
+                    <label for="modal-category-name">Kategori Adı</label>
+                    <input type="text" id="modal-category-name" required placeholder="Kategori adı girin" autocomplete="off" oninput="markUnsaved()" onchange="markUnsaved()">
+                </div>
+
+                <div class="form-group">
+                    <label>Kategori Rengi</label>
+                    <div class="color-picker-grid">
+                        <label class="color-option" style="background-color: var(--btn-coffee); color: #ffffff;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="var(--btn-coffee)">
+                            <span>Kahve</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-teal); color: #111827;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="var(--btn-teal)">
+                            <span>Turkuaz</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-orange); color: #ffffff;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="var(--btn-orange)">
+                            <span>Turuncu</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-blue); color: #ffffff;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="var(--btn-blue)">
+                            <span>Mavi</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-purple); color: #ffffff;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="var(--btn-purple)">
+                            <span>Mor</span>
+                        </label>
+                        <label class="color-option" style="background-color: var(--btn-green); color: #111827;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="var(--btn-green)">
+                            <span>Yeşil</span>
+                        </label>
+                        <label class="color-option" style="background-color: #ef4444; color: #ffffff;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="#ef4444">
+                            <span>Kırmızı</span>
+                        </label>
+                        <label class="color-option" style="background-color: #6b7280; color: #ffffff;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="#6b7280">
+                            <span>Gri</span>
+                        </label>
+                        <label class="color-option" style="background-color: #ec4899; color: #ffffff;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="#ec4899">
+                            <span>Pembe</span>
+                        </label>
+                        <label class="color-option" style="background-color: #f59e0b; color: #ffffff;">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" value="#f59e0b">
+                            <span>Sarı</span>
+                        </label>
+                        <label class="color-option" id="modal-category-color-custom-label" style="background-color: #374151; color: #ffffff; grid-column: span 2; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="if(event.target.type !== 'color') document.getElementById('modal-category-color-custom-picker').click();">
+                            <input type="radio" name="modal-category-color" onchange="markUnsaved()" id="modal-category-color-custom-radio" value="#374151">
+                            <span>Özel:</span>
+                            <input type="color" id="modal-category-color-custom-picker" value="#374151" style="border: none; background: transparent; width: 34px; height: 26px; cursor: pointer; padding: 0;">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-actions" style="margin-top: 20px;">
+                    <button type="submit" class="btn-save">Değişiklikleri Kaydet</button>
+                    <button type="button" class="btn-cancel" onclick="closeCategoryModal()">Vazgeç</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CUSTOM ALERT MODAL -->
+    <div id="custom-alert-modal" class="modal-overlay" onclick="attemptCloseModal('custom-alert-modal')" style="display: none; z-index: 11000;">
+        <div class="modal-card" onclick="event.stopPropagation()" style="max-width: 420px; text-align: center; padding: 28px;">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; justify-content: center;">
+                <h2 id="custom-alert-title" style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">Sistem Uyarısı</h2>
+            </div>
+            <div class="modal-body" style="padding: 15px 0 25px 0;">
+                <p id="custom-alert-message" style="color: var(--text-muted); font-size: 1.05rem; line-height: 1.5;"></p>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: center;">
+                <button id="btn-custom-alert-ok" class="btn-complete-payment" style="height: 46px; margin-top: 0; font-size: 1.05rem; padding: 0 32px;" onclick="closeCustomAlert()">TAMAM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM CONFIRM MODAL -->
+    <div id="custom-confirm-modal" class="modal-overlay" onclick="attemptCloseModal('custom-confirm-modal')" style="display: none; z-index: 11000;">
+        <div class="modal-card" onclick="event.stopPropagation()" style="max-width: 420px; text-align: center; padding: 28px;">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; justify-content: center;">
+                <h2 id="custom-confirm-title" style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">Onay</h2>
+            </div>
+            <div class="modal-body" style="padding: 15px 0 25px 0;">
+                <p id="custom-confirm-message" style="color: var(--text-muted); font-size: 1.05rem; line-height: 1.5;"></p>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 14px; justify-content: center;">
+                <button id="btn-custom-confirm-no" class="quick-cash-btn" style="flex: 1; height: 46px; font-size: 1rem; border-radius: var(--border-radius-md);" onclick="closeCustomConfirm(false)">SONRA</button>
+                <button id="btn-custom-confirm-yes" class="btn-complete-payment" style="flex: 1; height: 46px; margin-top: 0; font-size: 1rem; background-color: var(--btn-orange); box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);" onclick="closeCustomConfirm(true)">ŞİMDİ GÜNCELLE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPDATE PROGRESS OVERLAY -->
+    <div id="update-progress-overlay" class="modal-overlay" onclick="attemptCloseModal('update-progress-overlay')" style="display: none; z-index: 12000;">
+        <div class="modal-card" onclick="event.stopPropagation()" style="max-width: 400px; text-align: center; padding: 32px;">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; justify-content: center;">
+                <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">Güncelleme İndiriliyor</h2>
+            </div>
+            <div class="modal-body" style="padding: 20px 0 10px 0; display: flex; flex-direction: column; gap: 16px; align-items: center;">
+                <p style="color: var(--text-muted); font-size: 1rem;">Yeni sürüm indiriliyor, lütfen uygulamayı kapatmayın...</p>
+                <div style="width: 100%; height: 8px; background-color: rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden; border: 1px solid var(--panel-border);">
+                    <div id="update-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--btn-orange), var(--btn-purple)); border-radius: 4px; transition: width 0.1s ease;"></div>
+                </div>
+                <div id="update-progress-text" style="font-size: 1.1rem; font-weight: 700; color: var(--btn-orange);">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Edit Products Modal -->
+    <div id="bulk-edit-products-modal" class="modal-overlay" onclick="attemptCloseModal('bulk-edit-products-modal')" onclick="attemptCloseModal('bulk-edit-products-modal')" style="display: none;">
+        <div class="modal-card modal-lg" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 style="font-size: 1.5rem;">Ürünleri Toplu Düzenle</h2>
+                <button class="btn-close-modal" onclick="attemptCloseModal('bulk-edit-products-modal')">×</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; padding: 0;">
+                <table class="products-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 16px; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 1.1rem; width: 10%;">Görsel</th>
+                            <th style="padding: 16px; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 1.1rem; width: 25%;">Ürün Adı</th>
+                            <th style="padding: 16px; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 1.1rem; width: 25%;">Fiyat (TL)</th>
+                            <th style="padding: 16px; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 1.1rem; width: 25%;">Kategori</th>
+                            <th style="padding: 16px; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 1.1rem; width: 25%;">Renk</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bulk-edit-products-body">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer" style="padding: 16px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn-cancel" onclick="closeBulkEditProductsModal()">Vazgeç</button>
+                <button class="btn-save" onclick="saveBulkEditProducts()">Değişiklikleri Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Edit Categories Modal -->
+    <div id="bulk-edit-categories-modal" class="modal-overlay" onclick="attemptCloseModal('bulk-edit-categories-modal')" onclick="attemptCloseModal('bulk-edit-categories-modal')" style="display: none;">
+        <div class="modal-card modal-lg" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 style="font-size: 1.5rem;">Kategorileri Toplu Düzenle</h2>
+                <button class="btn-close-modal" onclick="attemptCloseModal('bulk-edit-categories-modal')">×</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; padding: 0;">
+                <table class="products-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 16px; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 1.1rem; width: 50%;">Kategori Adı</th>
+                            <th style="padding: 16px; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 1.1rem; width: 50%;">Renk</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bulk-edit-categories-body">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer" style="padding: 16px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn-cancel" onclick="closeBulkEditCategoriesModal()">Vazgeç</button>
+                <button class="btn-save" onclick="saveBulkEditCategories()">Değişiklikleri Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">Mesaj</div>
+
+    <!-- Firebase SDK Compat (Local) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="app.js"></script>
+
+    <!-- Create User Modal -->
+    <div id="create-user-modal" class="modal-overlay" onclick="attemptCloseModal('create-user-modal')" style="display: none; z-index: 1000;">
+        <div class="modal-card" onclick="event.stopPropagation()" style="width: 400px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>Yeni Kullanıcı Oluştur</h2>
+                <button class="btn-close-modal" onclick="attemptCloseModal('create-user-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Kullanıcı Adı</label>
+                    <input type="text" id="new-user-username" class="login-input" placeholder="Örn: yenicafe">
+                </div>
+                <div class="form-group">
+                    <label>Şifre</label>
+                    <input type="text" id="new-user-password" class="login-input" placeholder="Örn: 123456">
+                </div>
+            </div>
+            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+                <button class="btn-cancel" onclick="closeCreateUserModal()" style="padding: 0 24px; font-size: 1.1rem; height: 50px;">İptal</button>
+                <button class="btn-save" onclick="submitCreateUser()" style="padding: 0 24px; font-size: 1.1rem; height: 50px; flex: none;">Oluştur</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
